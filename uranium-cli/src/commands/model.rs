@@ -56,7 +56,7 @@ pub async fn list(server_url: &str, detailed: bool) -> Result<()> {
                 model.created_at.format("%Y-%m-%d %H:%M:%S")
             );
             if model.encrypted_with_se {
-                println!("  {} Encrypted with Secure Enclave", "🔐");
+                println!("  🔐 Encrypted with Secure Enclave");
             } else {
                 println!("  🔒 Standard encryption");
             }
@@ -101,7 +101,7 @@ pub async fn load(server_url: &str, model_id: &str, _output: Option<PathBuf>) ->
     println!("  Name: {}", response.name.green());
     println!("  Size: {} bytes", response.size);
     if response.encrypted_with_se {
-        println!("  {} Decrypted with Secure Enclave", "🔐");
+        println!("  🔐 Decrypted with Secure Enclave");
     }
 
     // Note: Actual download would be implemented here
@@ -245,7 +245,7 @@ pub async fn info(server_url: &str, model_id: &str) -> Result<()> {
     println!("Size: {} bytes", model.size);
 
     if model.encrypted_with_se {
-        println!("Encryption: {} Secure Enclave", "🔐");
+        println!("Encryption: 🔐 Secure Enclave");
     } else {
         println!("Encryption: 🔒 Standard");
     }
@@ -263,12 +263,3 @@ fn detect_format(path: &Path) -> String {
     }
 }
 
-fn get_extension(format: &str) -> &'static str {
-    match format.to_lowercase().as_str() {
-        "safetensors" => ".safetensors",
-        "onnx" => ".onnx",
-        "pytorch" => ".pt",
-        "tensorflow" => ".pb",
-        _ => ".bin",
-    }
-}

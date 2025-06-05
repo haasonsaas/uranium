@@ -248,7 +248,7 @@ async fn show_status(server_url: &str) -> Result<()> {
                 status.models_count
             );
             if status.secure_enclave_enabled {
-                println!("  {} Secure Enclave enabled", "🔐");
+                println!("  🔐 Secure Enclave enabled");
             }
         }
         Err(_) => {
