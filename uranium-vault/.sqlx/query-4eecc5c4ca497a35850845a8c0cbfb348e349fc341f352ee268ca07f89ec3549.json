@@ -1,0 +1,56 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT id, username, email, roles, created_at, last_login, is_active\n            FROM users\n            WHERE id = ?1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "username",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "email",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "roles",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "last_login",
+        "ordinal": 5,
+        "type_info": "Integer"
+      },
+      {
+        "name": "is_active",
+        "ordinal": 6,
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "4eecc5c4ca497a35850845a8c0cbfb348e349fc341f352ee268ca07f89ec3549"
+}

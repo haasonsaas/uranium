@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT COUNT(*) as count FROM audit_log WHERE event_type = 'auth_attempt' AND event_data LIKE '%\"success\":false%'",
+  "describe": {
+    "columns": [
+      {
+        "name": "count",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "170e03c34fad14d35170a464dfd200d9ea2bbdf4331c916173041bc6a4dda77d"
+}

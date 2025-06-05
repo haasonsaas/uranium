@@ -1,0 +1,43 @@
+# Uranium Vault Configuration
+
+[server]
+host = "127.0.0.1"
+port = 8443
+
+[security]
+encryption_algorithm = "ChaCha20Poly1305"
+hash_algorithm = "Blake3"
+enable_memory_protection = true
+enable_secure_enclave = true  # Enable hardware-backed encryption on macOS
+master_key_source = "Environment"
+require_mfa = false
+
+[storage]
+base_path = "./vault/models"
+database_url = "sqlite://vault.db?mode=rwc"
+enable_compression = false
+chunk_size_mb = 64
+
+[auth]
+jwt_secret = "change-me-in-production-use-long-random-string"
+token_duration_hours = 24
+session_timeout_minutes = 60
+max_sessions_per_user = 5
+
+[auth.password_requirements]
+min_length = 12
+require_uppercase = true
+require_lowercase = true
+require_numbers = true
+require_special_chars = true
+
+[audit]
+backend = { tag = "Database" }
+retention_days = 90
+enable_security_monitoring = true
+
+[performance]
+cache_size_mb = 1024
+max_concurrent_loads = 10
+enable_metrics = true
+metrics_port = 9090

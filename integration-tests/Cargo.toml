@@ -1,0 +1,16 @@
+[package]
+name = "integration-tests"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+anyhow = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+uuid = { version = "1.0", features = ["v4"] }
+uranium-sdk = { path = "../uranium-sdk/rust" }
+uranium-core = { path = "../uranium-core" }
+
+[[test]]
+name = "integration_test"
+path = "integration_test.rs"

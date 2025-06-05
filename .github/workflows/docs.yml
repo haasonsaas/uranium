@@ -1,0 +1,29 @@
+name: Documentation
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  check-docs:
+    name: Check Documentation
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Check README exists
+      run: test -f README.md
+    
+    - name: Check for broken links in README
+      uses: gaurav-nelson/github-action-markdown-link-check@v1
+      with:
+        use-quiet-mode: 'yes'
+        config-file: '.github/markdown-link-check-config.json'
+      continue-on-error: true
+    
+    - name: Validate Markdown
+      run: |
+        npm install -g markdownlint-cli
+        markdownlint README.md --disable MD013 MD033 || true

@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT COUNT(DISTINCT model_id) as count FROM audit_log WHERE event_type = 'model_accessed' AND timestamp >= ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "count",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "69b6b905ab027a90a9f682c217e997cd3025c75d0462bbc0e90d6dad1bc6c522"
+}

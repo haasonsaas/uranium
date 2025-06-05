@@ -1,0 +1,45 @@
+[package]
+name = "uranium-cli"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "uranium"
+path = "src/main.rs"
+
+[dependencies]
+# Core
+uranium-core = { path = "../uranium-core" }
+
+# CLI
+clap = { version = "4.5", features = ["derive", "env"] }
+colored = "2.1"
+indicatif = "0.17"
+dialoguer = "0.11"
+
+# Async
+tokio = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+toml = "0.8"
+
+# HTTP client
+reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+
+# Utils
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+
+# Security
+rpassword = "7.3"
+hex = "0.4"
+dirs = "5.0"

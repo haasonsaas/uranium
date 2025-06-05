@@ -1,0 +1,60 @@
+[package]
+name = "uranium-core"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+# Workspace dependencies
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+# Crypto
+ring = { workspace = true }
+aead = { workspace = true }
+chacha20poly1305 = { workspace = true }
+aes-gcm = { workspace = true }
+blake3 = { workspace = true }
+argon2 = { workspace = true }
+rand = { workspace = true }
+zeroize = { workspace = true }
+
+# Storage
+bincode = { workspace = true }
+bytes = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+
+# File handling
+memmap2 = "0.9"
+tempfile = "3.12"
+
+# Platform-specific
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+security-framework = "2.11"
+security-framework-sys = "2.11"
+core-foundation = "0.9"
+
+[dev-dependencies]
+criterion = "0.5"
+hex = "0.4"
+
+[[bench]]
+name = "encryption"
+harness = false
+
+[[example]]
+name = "simple_demo"
+
+[[example]]
+name = "keychain_demo"
+

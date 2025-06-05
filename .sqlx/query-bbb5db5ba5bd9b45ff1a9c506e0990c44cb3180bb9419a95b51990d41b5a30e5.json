@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE users\n            SET last_login = ?1\n            WHERE id = ?2\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "bbb5db5ba5bd9b45ff1a9c506e0990c44cb3180bb9419a95b51990d41b5a30e5"
+}
