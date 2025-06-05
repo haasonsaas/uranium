@@ -5,8 +5,16 @@
 /// - Storing models with hardware-backed encryption
 /// - Migrating existing models to SE encryption
 /// - Checking SE status
+
+#[cfg(not(target_os = "macos"))]
+fn main() {
+    println!("This example requires macOS for Secure Enclave support");
+}
+
+#[cfg(target_os = "macos")]
 use uranium_core::{platform::macos::SecureEnclaveKey, Result};
 
+#[cfg(target_os = "macos")]
 fn main() -> Result<()> {
     println!("🏛️  Uranium Vault with Secure Enclave");
     println!("====================================\n");

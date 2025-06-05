@@ -9,6 +9,12 @@ impl LinuxSecurity {
     }
 }
 
+impl Default for LinuxSecurity {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PlatformSecurity for LinuxSecurity {
     fn lock_memory(&self, addr: *const u8, len: usize) -> Result<()> {
         #[cfg(target_os = "linux")]

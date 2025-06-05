@@ -1,8 +1,15 @@
+#[cfg(not(target_os = "macos"))]
+fn main() {
+    println!("This example requires macOS for Secure Enclave support");
+}
+
+#[cfg(target_os = "macos")]
 use uranium_core::{
     platform::macos::{SecureEnclaveKey, SecureEnclaveManager},
     Result,
 };
 
+#[cfg(target_os = "macos")]
 fn main() -> Result<()> {
     println!("🔐 Uranium Secure Enclave Simple Demo");
     println!("=====================================\n");

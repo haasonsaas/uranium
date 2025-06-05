@@ -9,6 +9,12 @@ impl WindowsSecurity {
     }
 }
 
+impl Default for WindowsSecurity {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PlatformSecurity for WindowsSecurity {
     fn lock_memory(&self, _addr: *const u8, _len: usize) -> Result<()> {
         // Windows uses VirtualLock

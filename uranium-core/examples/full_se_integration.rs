@@ -1,8 +1,16 @@
+#[cfg(not(target_os = "macos"))]
+fn main() {
+    println!("This example requires macOS for Secure Enclave support");
+}
+
+#[cfg(target_os = "macos")]
 use chrono::Utc;
 /// Full Secure Enclave Integration Demo
 ///
 /// This shows exactly how the vault uses Secure Enclave when configured
+#[cfg(target_os = "macos")]
 use std::path::PathBuf;
+#[cfg(target_os = "macos")]
 use uranium_core::{
     crypto::{EncryptionAlgorithm, VaultCrypto},
     integrity::{HashAlgorithm, IntegrityVerifier},
@@ -11,8 +19,10 @@ use uranium_core::{
     storage::{ModelStorage, SecureEnclaveStorage, SecureEnclaveStorageBuilder},
     Result,
 };
+#[cfg(target_os = "macos")]
 use uuid::Uuid;
 
+#[cfg(target_os = "macos")]
 fn main() -> Result<()> {
     println!("🔐 Full Secure Enclave Integration Demo");
     println!("======================================\n");
