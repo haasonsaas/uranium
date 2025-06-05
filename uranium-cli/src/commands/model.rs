@@ -79,7 +79,7 @@ pub async fn list(server_url: &str, detailed: bool) -> Result<()> {
     Ok(())
 }
 
-pub async fn load(server_url: &str, model_id: &str, output: Option<PathBuf>) -> Result<()> {
+pub async fn load(server_url: &str, model_id: &str, _output: Option<PathBuf>) -> Result<()> {
     let client = UraniumClient::new(server_url.to_string())?;
 
     // For the demo, we'll just show a message since download isn't implemented
