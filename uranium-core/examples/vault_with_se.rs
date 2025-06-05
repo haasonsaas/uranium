@@ -35,6 +35,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
+#[cfg(target_os = "macos")]
 fn check_platform_security() {
     println!("🔒 Platform Security Status");
     println!("---------------------------");
@@ -61,6 +62,7 @@ fn check_platform_security() {
     println!("Platform: macOS");
 }
 
+#[cfg(target_os = "macos")]
 fn show_vault_config() {
     println!("\n⚙️  Recommended Vault Configuration");
     println!("----------------------------------");
@@ -78,6 +80,7 @@ fn show_vault_config() {
     println!("```");
 }
 
+#[cfg(target_os = "macos")]
 fn demonstrate_se_vault() -> Result<()> {
     println!("\n🚀 Vault Operations with Secure Enclave");
     println!("--------------------------------------");
