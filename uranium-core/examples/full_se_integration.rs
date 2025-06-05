@@ -33,6 +33,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
+#[cfg(target_os = "macos")]
 fn demonstrate_vault_integration() -> Result<()> {
     println!("📋 Simulating Vault Configuration:");
     println!("  enable_secure_enclave = true");
@@ -89,6 +90,7 @@ fn demonstrate_vault_integration() -> Result<()> {
     Ok(())
 }
 
+#[cfg(target_os = "macos")]
 #[cfg(target_os = "macos")]
 fn demonstrate_se_operations(se_storage: SecureEnclaveStorage) -> Result<()> {
     println!("\n🚀 Demonstrating Secure Enclave Operations:");
