@@ -15,7 +15,6 @@ use uranium_core::{
     crypto::{EncryptionAlgorithm, VaultCrypto},
     integrity::{HashAlgorithm, IntegrityVerifier},
     models::{ModelFormat, ModelMetadata},
-    platform::macos::SecureEnclaveKey,
     storage::{ModelStorage, SecureEnclaveStorage, SecureEnclaveStorageBuilder},
     Result,
 };
@@ -49,7 +48,7 @@ fn demonstrate_vault_integration() -> Result<()> {
     println!("\n🏗️  Creating storage (same as Vault::new())...");
 
     // First create regular storage (always needed)
-    let base_storage = ModelStorage::new(
+    let _base_storage = ModelStorage::new(
         &storage_path,
         VaultCrypto::new(encryption_algorithm),
         IntegrityVerifier::new(HashAlgorithm::Blake3),
@@ -90,7 +89,6 @@ fn demonstrate_vault_integration() -> Result<()> {
     Ok(())
 }
 
-#[cfg(target_os = "macos")]
 #[cfg(target_os = "macos")]
 fn demonstrate_se_operations(se_storage: SecureEnclaveStorage) -> Result<()> {
     println!("\n🚀 Demonstrating Secure Enclave Operations:");

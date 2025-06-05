@@ -1,6 +1,5 @@
 use chrono::Utc;
 use std::io::{self, Read, Write};
-use std::path::Path;
 use tempfile::TempDir;
 use uranium_core::{
     crypto::{EncryptionAlgorithm, EncryptionKey, VaultCrypto},
@@ -176,8 +175,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let to_read = std::cmp::min(buf.len(), remaining);
 
             // Simulate data generation
-            for i in 0..to_read {
-                buf[i] = ((self.position + i) % 256) as u8;
+            for (i, byte) in buf.iter_mut().enumerate().take(to_read) {
+                *byte = ((self.position + i) % 256) as u8;
             }
 
             self.position += to_read;
