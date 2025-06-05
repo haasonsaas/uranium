@@ -11,6 +11,7 @@ use uuid::Uuid;
 use crate::client::UraniumClient;
 
 #[derive(Deserialize)]
+#[allow(dead_code)]
 struct ModelMetadata {
     id: Uuid,
     name: String,
@@ -88,6 +89,7 @@ pub async fn load(server_url: &str, model_id: &str, _output: Option<PathBuf>) ->
     // Get model info
     #[derive(Deserialize)]
     struct LoadResponse {
+        #[allow(dead_code)]
         id: String,
         name: String,
         size: usize,
@@ -233,6 +235,7 @@ pub async fn info(server_url: &str, model_id: &str) -> Result<()> {
         name: String,
         size: usize,
         encrypted_with_se: bool,
+        #[allow(dead_code)]
         message: String,
     }
 
@@ -262,4 +265,3 @@ fn detect_format(path: &Path) -> String {
         _ => "unknown".to_string(),
     }
 }
-

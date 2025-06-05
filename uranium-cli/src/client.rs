@@ -68,6 +68,7 @@ impl UraniumClient {
         handle_response(response).await
     }
 
+    #[allow(dead_code)]
     pub async fn delete(&self, path: &str) -> Result<()> {
         let url = format!("{}{}", self.base_url, path);
 
@@ -90,6 +91,7 @@ impl UraniumClient {
         }
     }
 
+    #[allow(dead_code)]
     pub async fn download(&self, path: &str) -> Result<Vec<u8>> {
         let url = format!("{}{}", self.base_url, path);
 
