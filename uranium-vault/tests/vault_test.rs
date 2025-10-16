@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use tempfile::TempDir;
 use tokio;
 use uuid::Uuid;
 
@@ -10,8 +9,7 @@ use uranium_core::{
 };
 use uranium_vault::{
     audit::{AuditEvent, AuditFilter, AuditLogger, AuditStats},
-    auth::{AuthManager, AuthProvider, Credentials, DatabaseAuthProvider, Permission, User},
-    config::VaultConfiguration,
+    auth::{AuthManager, AuthProvider, Credentials, Permission, User},
     session::Session,
     vault::{Vault, VaultConfig},
 };
@@ -107,8 +105,8 @@ impl AuthProvider for MockAuthProvider {
     }
 }
 
-async fn setup_test_vault() -> (Vault, TempDir, Arc<MockAuditLogger>) {
-    let temp_dir = TempDir::new().unwrap();
+async fn setup_test_vault() -> (Vault, tempfile::TempDir, Arc<MockAuditLogger>) {
+    let temp_dir = tempfile::TempDir::new().unwrap();
 
     let config = VaultConfig {
         storage_path: temp_dir.path().to_path_buf(),
@@ -118,10 +116,11 @@ async fn setup_test_vault() -> (Vault, TempDir, Arc<MockAuditLogger>) {
         cache_size_mb: 10,
         session_timeout_minutes: 60,
         enable_memory_protection: false, // Disable for tests
+        enable_secure_enclave: false,
     };
 
     let auth_manager = Arc::new(AuthManager::new(
-        Box::new(MockAuthProvider),
+        Arc::new(MockAuthProvider),
         "test_jwt_secret".to_string(),
         24,
     ));
@@ -138,14 +137,14 @@ async fn test_vault_lock_unlock() {
     let (vault, _temp_dir, audit_logger) = setup_test_vault().await;
 
     // Vault should start locked
-    assert!(vault.is_locked());
+    assert!(vault.is_locked().await);
 
     // Generate a master key
     let master_key = EncryptionKey::generate();
 
     // Unlock the vault
     vault.unlock(master_key.clone()).await.unwrap();
-    assert!(!vault.is_locked());
+    assert!(!vault.is_locked().await);
 
     // Check audit log
     let events = audit_logger
@@ -155,6 +154,7 @@ async fn test_vault_lock_unlock() {
             user_id: None,
             model_id: None,
             event_types: None,
+            min_severity: None,
             limit: None,
         })
         .await
@@ -167,7 +167,7 @@ async fn test_vault_lock_unlock() {
 
     // Lock the vault
     vault.lock().await.unwrap();
-    assert!(vault.is_locked());
+    assert!(vault.is_locked().await);
 }
 
 #[tokio::test]
@@ -180,7 +180,7 @@ async fn test_model_storage_and_retrieval() {
 
     // Create session
     let token = vault
-        .auth_manager
+        .auth_manager()
         .authenticate(&Credentials {
             username: "test_user".to_string(),
             password: "test_pass".to_string(),
@@ -233,6 +233,7 @@ async fn test_model_storage_and_retrieval() {
             user_id: None,
             model_id: Some(model_id),
             event_types: None,
+            min_severity: None,
             limit: None,
         })
         .await
@@ -283,7 +284,7 @@ async fn test_model_caching() {
 
     // Create session
     let token = vault
-        .auth_manager
+        .auth_manager()
         .authenticate(&Credentials {
             username: "test_user".to_string(),
             password: "test_pass".to_string(),

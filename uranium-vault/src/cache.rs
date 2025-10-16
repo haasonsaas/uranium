@@ -1,5 +1,6 @@
 use parking_lot::RwLock;
 use std::collections::{HashMap, VecDeque};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use uuid::Uuid;
@@ -12,6 +13,9 @@ pub struct ModelCache {
     max_size_bytes: usize,
     current_size_bytes: Arc<RwLock<usize>>,
     eviction_tx: broadcast::Sender<Uuid>,
+    hits: AtomicU64,
+    misses: AtomicU64,
+    evictions: AtomicU64,
 }
 
 struct CacheEntry {
@@ -31,6 +35,9 @@ impl ModelCache {
             max_size_bytes: max_size_mb * 1024 * 1024,
             current_size_bytes: Arc::new(RwLock::new(0)),
             eviction_tx,
+            hits: AtomicU64::new(0),
+            misses: AtomicU64::new(0),
+            evictions: AtomicU64::new(0),
         }
     }
 
@@ -46,8 +53,10 @@ impl ModelCache {
             queue.retain(|&id| id != model_id);
             queue.push_back(model_id);
 
+            self.hits.fetch_add(1, Ordering::Relaxed);
             Some(entry.model.clone())
         } else {
+            self.misses.fetch_add(1, Ordering::Relaxed);
             None
         }
     }
@@ -134,8 +143,10 @@ impl ModelCache {
             };
 
             if let Some(model_id) = lru_model_id {
-                self.remove(model_id).await;
-                evicted_count += 1;
+                if self.remove(model_id).await.is_some() {
+                    evicted_count += 1;
+                    self.evictions.fetch_add(1, Ordering::Relaxed);
+                }
             } else {
                 break;
             }
@@ -151,13 +162,26 @@ impl ModelCache {
         let current_size = *self.current_size_bytes.read();
 
         let total_access_count: u64 = cache.values().map(|entry| entry.access_count).sum();
+        let hits = self.hits.load(Ordering::Relaxed);
+        let misses = self.misses.load(Ordering::Relaxed);
+        let requests = hits + misses;
+        let hit_rate = if requests > 0 {
+            hits as f64 / requests as f64
+        } else {
+            0.0
+        };
+        let evictions = self.evictions.load(Ordering::Relaxed);
 
         CacheStats {
             entries: cache.len(),
             size_bytes: current_size,
             max_size_bytes: self.max_size_bytes,
             total_access_count,
-            hit_rate: 0.0, // Would need to track hits/misses
+            hit_rate,
+            requests,
+            hits,
+            misses,
+            evictions,
         }
     }
 
@@ -173,6 +197,10 @@ pub struct CacheStats {
     pub max_size_bytes: usize,
     pub total_access_count: u64,
     pub hit_rate: f64,
+    pub requests: u64,
+    pub hits: u64,
+    pub misses: u64,
+    pub evictions: u64,
 }
 
 #[cfg(test)]
@@ -216,6 +244,9 @@ mod tests {
         let retrieved = cache.get(model_id).await;
         assert!(retrieved.is_some());
         assert_eq!(retrieved.unwrap().metadata.id, model.metadata.id);
+        assert_eq!(cache.get_stats().hits, 1);
+        assert_eq!(cache.get_stats().misses, 0);
+        assert_eq!(cache.get_stats().requests, 1);
 
         // Remove
         let removed = cache.remove(model_id).await;
@@ -224,6 +255,10 @@ mod tests {
         // Get after remove
         let retrieved = cache.get(model_id).await;
         assert!(retrieved.is_none());
+        let stats = cache.get_stats();
+        assert_eq!(stats.hits, 1);
+        assert_eq!(stats.misses, 1);
+        assert_eq!(stats.requests, 2);
     }
 
     #[tokio::test]
@@ -251,5 +286,8 @@ mod tests {
         assert!(cache.get(model1_id).await.is_none());
         assert!(cache.get(model2_id).await.is_some());
         assert!(cache.get(model3_id).await.is_some());
+
+        let stats = cache.get_stats();
+        assert!(stats.evictions >= 1);
     }
 }

@@ -3759,6 +3759,7 @@ dependencies = [
  "serde_json",
  "sqlx",
  "sysinfo",
+ "tempfile",
  "thiserror 1.0.69",
  "tokio",
  "tokio-util",

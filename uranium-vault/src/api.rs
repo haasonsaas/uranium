@@ -200,18 +200,45 @@ struct VaultStatus {
 struct CacheStats {
     entries: usize,
     size_mb: f64,
+    hit_rate: f64,
+    hits: u64,
+    misses: u64,
+    requests: u64,
+    evictions: u64,
 }
 
 async fn vault_status(State(state): State<Arc<ApiState>>) -> ApiResult<Json<VaultStatus>> {
     let locked = state.vault.is_locked().await;
+    let (models_count, cache_stats) = if locked {
+        (0, CacheStats {
+            entries: 0,
+            size_mb: 0.0,
+            hit_rate: 0.0,
+            hits: 0,
+            misses: 0,
+            requests: 0,
+            evictions: 0,
+        })
+    } else {
+        let stats = state.vault.get_cache_stats();
+        (
+            state.vault.model_count(),
+            CacheStats {
+                entries: stats.entries,
+                size_mb: stats.size_bytes as f64 / (1024.0 * 1024.0),
+                hit_rate: stats.hit_rate,
+                hits: stats.hits,
+                misses: stats.misses,
+                requests: stats.requests,
+                evictions: stats.evictions,
+            },
+        )
+    };
 
     Ok(Json(VaultStatus {
         locked,
-        models_count: 0, // TODO: Implement
-        cache_stats: CacheStats {
-            entries: 0,
-            size_mb: 0.0,
-        },
+        models_count,
+        cache_stats,
     }))
 }
 

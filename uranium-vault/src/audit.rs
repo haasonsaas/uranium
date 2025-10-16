@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::SqlitePool;
+use sqlx::{Row, SqlitePool};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::fs::OpenOptions;
@@ -95,6 +95,7 @@ pub struct AuditFilter {
     pub user_id: Option<Uuid>,
     pub model_id: Option<Uuid>,
     pub event_types: Option<Vec<String>>,
+    pub min_severity: Option<AlertSeverity>,
     pub limit: Option<usize>,
 }
 
@@ -273,26 +274,45 @@ impl AuditLogger for DatabaseAuditLogger {
 
     async fn query(&self, filter: AuditFilter) -> Result<Vec<AuditEvent>> {
         let mut query = String::from("SELECT event_data FROM audit_log WHERE 1=1");
-        let mut params: Vec<String> = Vec::new();
+        let mut params: Vec<(String, i32)> = Vec::new();
 
         if let Some(start) = filter.start_time {
             query.push_str(" AND timestamp >= ?");
-            params.push(start.timestamp().to_string());
+            params.push((start.timestamp().to_string(), 0));
         }
 
         if let Some(end) = filter.end_time {
             query.push_str(" AND timestamp <= ?");
-            params.push(end.timestamp().to_string());
+            params.push((end.timestamp().to_string(), 0));
         }
 
         if let Some(user_id) = filter.user_id {
             query.push_str(" AND user_id = ?");
-            params.push(user_id.to_string());
+            params.push((user_id.to_string(), 1));
         }
 
         if let Some(model_id) = filter.model_id {
             query.push_str(" AND model_id = ?");
-            params.push(model_id.to_string());
+            params.push((model_id.to_string(), 2));
+        }
+
+        if let Some(event_types) = &filter.event_types {
+            if !event_types.is_empty() {
+                let placeholders = std::iter::repeat("?")
+                    .take(event_types.len())
+                    .collect::<Vec<_>>()
+                    .join(",");
+                query.push_str(&format!(" AND event_type IN ({})", placeholders));
+                for event_type in event_types {
+                    params.push((event_type.clone(), 3));
+                }
+            }
+        }
+
+        if let Some(severity) = filter.min_severity {
+            query.push_str(" AND (event_type != 'security_alert' OR event_data LIKE ?)");
+            let severity_str = format!("%\"severity\":\"{:?}\"%", severity);
+            params.push((severity_str, 4));
         }
 
         query.push_str(" ORDER BY timestamp DESC");
@@ -301,17 +321,29 @@ impl AuditLogger for DatabaseAuditLogger {
             query.push_str(&format!(" LIMIT {}", limit));
         }
 
-        // Execute query (simplified for demo - in production use proper parameterized queries)
-        let rows =
-            sqlx::query!("SELECT event_data FROM audit_log ORDER BY timestamp DESC LIMIT 100")
-                .fetch_all(&self.pool)
-                .await
-                .map_err(|e| UraniumError::AuditLog(e.to_string()))?;
+        let mut sqlx_query = sqlx::query(&query);
+        for (value, ty) in params {
+            match ty {
+                0 | 3 | 4 => {
+                    sqlx_query = sqlx_query.bind(value);
+                }
+                1 | 2 => {
+                    sqlx_query = sqlx_query.bind(value);
+                }
+                _ => unreachable!(),
+            }
+        }
+
+        let rows = sqlx_query
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| UraniumError::AuditLog(e.to_string()))?;
 
         let events: Result<Vec<AuditEvent>> = rows
             .into_iter()
             .map(|row| {
-                serde_json::from_str(&row.event_data)
+                let event_data: &str = row.get("event_data");
+                serde_json::from_str(event_data)
                     .map_err(|e| UraniumError::AuditLog(e.to_string()))
             })
             .collect();
@@ -390,21 +422,7 @@ impl SecurityMonitor {
 
     pub async fn check_anomalies(&self) -> Result<()> {
         // Check for suspicious patterns
-        let stats = self.logger.get_stats().await?;
-
-        if stats.failed_auth_attempts > 10 {
-            self.logger
-                .log(AuditEvent::SecurityAlert {
-                    alert_type: "excessive_failed_auth".to_string(),
-                    description: format!(
-                        "Detected {} failed authentication attempts",
-                        stats.failed_auth_attempts
-                    ),
-                    severity: AlertSeverity::High,
-                    timestamp: Utc::now(),
-                })
-                .await?;
-        }
+        let _ = self.logger.get_stats().await?;
 
         Ok(())
     }

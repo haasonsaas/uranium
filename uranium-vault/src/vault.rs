@@ -17,7 +17,7 @@ use uranium_core::storage::{SecureEnclaveStorage, SecureEnclaveStorageBuilder};
 
 use crate::audit::{AuditEvent, AuditLogger};
 use crate::auth::{AuthManager, Permission, User};
-use crate::cache::ModelCache;
+use crate::cache::{CacheStats, ModelCache};
 use crate::session::{Session, SessionManager};
 
 #[derive(Debug, Clone)]
@@ -147,6 +147,10 @@ impl Vault {
 
     pub async fn is_locked(&self) -> bool {
         self.master_key.read().await.is_none()
+    }
+
+    pub fn auth_manager(&self) -> Arc<AuthManager> {
+        self.auth_manager.clone()
     }
 
     pub async fn load_model(
@@ -334,6 +338,17 @@ impl Vault {
         }
 
         Ok(metadata_list)
+    }
+
+    pub fn model_count(&self) -> usize {
+        self.storage
+            .list_models()
+            .map(|models| models.len())
+            .unwrap_or(0)
+    }
+
+    pub fn get_cache_stats(&self) -> CacheStats {
+        self.cache.get_stats()
     }
 
     pub async fn create_session(&self, token: &str) -> Result<Session> {

@@ -42,6 +42,7 @@ tokio-util = { version = "0.7", features = ["full"] }
 futures = "0.3"
 async-trait = "0.1"
 parking_lot = "0.12"
+tempfile = "3"
 
 # Configuration
 config = "0.14"

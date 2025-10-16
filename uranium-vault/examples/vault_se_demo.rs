@@ -3,32 +3,9 @@
 /// This demonstrates that the vault is ready to use Secure Enclave
 /// when properly configured.
 use std::path::PathBuf;
-use std::sync::Arc;
 use uranium_core::crypto::EncryptionAlgorithm;
 use uranium_core::integrity::HashAlgorithm;
-use uranium_vault::{
-    audit::{AuditEvent, AuditLogger},
-    auth::AuthManager,
-    vault::{Vault, VaultConfig},
-};
-
-// Mock audit logger for demo
-struct MockAuditLogger;
-
-#[async_trait::async_trait]
-impl AuditLogger for MockAuditLogger {
-    async fn log(&self, event: AuditEvent) -> uranium_core::Result<()> {
-        println!("📝 Audit: {:?}", event);
-        Ok(())
-    }
-
-    async fn query_events(
-        &self,
-        _filter: uranium_vault::audit::EventFilter,
-    ) -> uranium_core::Result<Vec<AuditEvent>> {
-        Ok(vec![])
-    }
-}
+use uranium_vault::vault::VaultConfig;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
