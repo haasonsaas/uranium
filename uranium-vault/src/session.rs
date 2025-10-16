@@ -223,6 +223,14 @@ impl SessionManager {
             .map(|sessions| sessions.len())
             .unwrap_or(0)
     }
+
+    pub fn active_session_ids(&self) -> Vec<Uuid> {
+        self.sessions
+            .read()
+            .keys()
+            .copied()
+            .collect()
+    }
 }
 
 #[cfg(test)]

@@ -17,7 +17,6 @@ use crate::errors::{Result, UraniumError};
 const KEY_SIZE: usize = 32; // 256 bits
 const SALT_SIZE: usize = 32;
 const PBKDF2_ITERATIONS: u32 = 100_000;
-const MAC_KEY_SIZE: usize = 32;
 const MAC_SALT_SIZE: usize = 32;
 
 // Streaming encryption constants
@@ -239,7 +238,6 @@ pub struct StreamingEncryptionHeader {
 
 #[derive(Clone)]
 struct MacState {
-    algorithm: MacAlgorithm,
     accumulator: MacAccumulator,
 }
 
@@ -252,11 +250,10 @@ impl MacState {
     fn new(algorithm: MacAlgorithm, key: &[u8]) -> Result<Self> {
         match algorithm {
             MacAlgorithm::Blake3Keyed => {
-                let mut key_array = [0u8; MAC_KEY_SIZE];
+                let mut key_array = [0u8; KEY_SIZE];
                 key_array.copy_from_slice(key);
                 let hasher = blake3::Hasher::new_keyed(&key_array);
                 Ok(Self {
-                    algorithm,
                     accumulator: MacAccumulator::Blake3(hasher),
                 })
             }
@@ -286,17 +283,8 @@ enum MacMode {
     Disabled,
     Enabled {
         algorithm: MacAlgorithm,
-        key: [u8; MAC_KEY_SIZE],
+        key: [u8; KEY_SIZE],
     },
-}
-
-impl MacMode {
-    fn mac_len(&self) -> usize {
-        match self {
-            MacMode::Disabled => 0,
-            MacMode::Enabled { algorithm, .. } => algorithm.mac_len(),
-        }
-    }
 }
 
 fn generate_mac_salt() -> Vec<u8> {
@@ -308,7 +296,7 @@ fn generate_mac_salt() -> Vec<u8> {
 fn derive_mac_key(
     key: &EncryptionKey,
     header: &StreamingEncryptionHeader,
-) -> Result<[u8; MAC_KEY_SIZE]> {
+) -> Result<[u8; KEY_SIZE]> {
     if header.mac_salt.len() != MAC_SALT_SIZE {
         return Err(UraniumError::Encryption(
             "Invalid MAC salt size for streaming encryption".to_string(),
@@ -367,7 +355,7 @@ fn mac_mode_for_decryptor(
 
 fn compute_chunk_mac(
     algorithm: MacAlgorithm,
-    mac_key: &[u8; MAC_KEY_SIZE],
+    mac_key: &[u8; KEY_SIZE],
     chunk_index: u64,
     nonce: &[u8],
     ciphertext: &[u8],
@@ -564,7 +552,6 @@ impl<W: Write + Send> StreamingEncryptor<W> for ChaCha20Poly1305StreamingEncrypt
 struct ChaCha20Poly1305StreamingDecryptor<R: Read + Send> {
     reader: R,
     cipher: ChaCha20Poly1305,
-    header: StreamingEncryptionHeader,
     chunk_index: u64,
     buffer: Vec<u8>,
     mac_mode: MacMode,
@@ -711,7 +698,6 @@ impl<W: Write + Send> StreamingEncryptor<W> for AesGcmStreamingEncryptor<W> {
 struct AesGcmStreamingDecryptor<R: Read + Send> {
     reader: R,
     cipher: Aes256Gcm,
-    header: StreamingEncryptionHeader,
     chunk_index: u64,
     buffer: Vec<u8>,
     mac_mode: MacMode,
@@ -749,7 +735,6 @@ impl<R: Read + Send> AesGcmStreamingDecryptor<R> {
         Ok(Self {
             reader,
             cipher,
-            header,
             chunk_index: 0,
             buffer: Vec::new(),
             mac_mode,
@@ -875,7 +860,7 @@ impl<R: Read + Send> StreamingDecryptor<R> for AesGcmStreamingDecryptor<R> {
                         id: "streaming_mac_missing".to_string(),
                     });
                 };
-                let Some(mut state) = self.mac_accumulator.as_ref().map(Clone::clone) else {
+                let Some(state) = self.mac_accumulator.as_ref().map(Clone::clone) else {
                     return Err(UraniumError::IntegrityCheckFailed {
                         id: "streaming_mac_state".to_string(),
                     });
@@ -937,7 +922,6 @@ impl<R: Read + Send> ChaCha20Poly1305StreamingDecryptor<R> {
         Ok(Self {
             reader,
             cipher,
-            header,
             chunk_index: 0,
             buffer: Vec::new(),
             mac_mode,

@@ -1,11 +1,10 @@
-use chrono::Utc;
+use uranium_core::platform::get_platform_security;
+#[cfg(target_os = "macos")]
 use uranium_core::{
     crypto::EncryptionAlgorithm,
     models::{LicenseConstraints, ModelFormat, ModelFramework, ModelMetadata},
-    platform::get_platform_security,
     Result,
 };
-use uuid::Uuid;
 
 #[cfg(target_os = "macos")]
 use uranium_core::{
@@ -13,7 +12,7 @@ use uranium_core::{
     storage::secure_enclave_storage::SecureEnclaveStorageBuilder,
 };
 
-fn main() -> Result<()> {
+fn main() -> uranium_core::Result<()> {
     println!("🔐 Uranium Secure Enclave Demo");
     println!("================================\n");
 
@@ -41,7 +40,7 @@ fn main() -> Result<()> {
         );
 
         if SecureEnclaveKey::is_available() {
-            demo_secure_enclave()?;
+            run_secure_enclave_demo()?;
         } else {
             println!("\n⚠️  Secure Enclave not available on this device");
             println!("   (Requires Apple Silicon Mac or Intel Mac with T2 chip)");
@@ -57,25 +56,7 @@ fn main() -> Result<()> {
 }
 
 #[cfg(target_os = "macos")]
-fn demo_secure_enclave() -> Result<()> {
-    println!("\n📱 Secure Enclave Operations");
-    println!("----------------------------");
-
-    // 1. Test basic Secure Enclave key operations
-    test_secure_enclave_keys()?;
-
-    // 2. Test Secure Enclave model storage
-    test_secure_enclave_storage()?;
-
-    // 3. Demonstrate key migration
-    test_key_migration()?;
-
-    println!("\n✅ All Secure Enclave operations completed successfully!");
-    Ok(())
-}
-
-#[cfg(target_os = "macos")]
-fn test_secure_enclave_keys() -> Result<()> {
+fn test_secure_enclave_keys() -> uranium_core::Result<()> {
     println!("\n1️⃣  Testing Secure Enclave Key Generation");
 
     let key_id = "demo_se_key";
@@ -101,7 +82,7 @@ fn test_secure_enclave_keys() -> Result<()> {
 }
 
 #[cfg(target_os = "macos")]
-fn test_secure_enclave_storage() -> Result<()> {
+fn test_secure_enclave_storage() -> uranium_core::Result<()> {
     println!("\n2️⃣  Testing Secure Enclave Model Storage");
 
     // Create temporary storage directory
@@ -116,7 +97,7 @@ fn test_secure_enclave_storage() -> Result<()> {
     println!("   ✅ Created Secure Enclave storage");
 
     // Create test model
-    let model_id = Uuid::new_v4();
+    let model_id = uuid::Uuid::new_v4();
     let metadata = ModelMetadata {
         id: model_id,
         name: "gpt-4-turbo-custom".to_string(),
@@ -160,7 +141,7 @@ fn test_secure_enclave_storage() -> Result<()> {
 }
 
 #[cfg(target_os = "macos")]
-fn test_key_migration() -> Result<()> {
+fn test_key_migration() -> uranium_core::Result<()> {
     println!("\n3️⃣  Testing Key Migration to Secure Enclave");
 
     // Simulate existing software-encrypted model
@@ -188,6 +169,6 @@ fn test_key_migration() -> Result<()> {
 }
 
 #[cfg(not(target_os = "macos"))]
-fn demo_secure_enclave() -> Result<()> {
+fn run_secure_enclave_demo() -> uranium_core::Result<()> {
     unreachable!("This function should only be called on macOS");
 }

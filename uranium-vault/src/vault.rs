@@ -52,8 +52,6 @@ pub struct Vault {
     storage: Arc<ModelStorage>,
     #[cfg(target_os = "macos")]
     secure_enclave_storage: Option<Arc<SecureEnclaveStorage>>,
-    crypto: Arc<VaultCrypto>,
-    verifier: Arc<IntegrityVerifier>,
     auth_manager: Arc<AuthManager>,
     session_manager: Arc<SessionManager>,
     audit_logger: Arc<dyn AuditLogger>,
@@ -91,8 +89,8 @@ impl Vault {
             None
         };
 
-        let crypto = Arc::new(VaultCrypto::new(config.encryption_algorithm));
-        let verifier = Arc::new(IntegrityVerifier::new(config.hash_algorithm));
+        let _crypto = Arc::new(VaultCrypto::new(config.encryption_algorithm));
+        let _verifier = Arc::new(IntegrityVerifier::new(config.hash_algorithm));
         let session_manager = Arc::new(SessionManager::new(
             config.session_timeout_minutes,
             auth_manager.get_provider(),
@@ -105,8 +103,6 @@ impl Vault {
             storage,
             #[cfg(target_os = "macos")]
             secure_enclave_storage,
-            crypto,
-            verifier,
             auth_manager,
             session_manager,
             audit_logger,

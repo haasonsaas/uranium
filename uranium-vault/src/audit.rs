@@ -11,6 +11,8 @@ use uuid::Uuid;
 
 use uranium_core::{Result, UraniumError};
 
+use crate::session::SessionManager;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "event_type")]
 pub enum AuditEvent {
@@ -107,10 +109,11 @@ pub struct AuditStats {
     pub models_accessed_today: u64,
     pub failed_auth_attempts: u64,
     pub security_alerts: u64,
+    pub total_sessions: u64,
+    pub active_session_ids: Vec<Uuid>,
 }
 
 pub struct FileAuditLogger {
-    file_path: String,
     file: Mutex<tokio::fs::File>,
 }
 
@@ -124,7 +127,6 @@ impl FileAuditLogger {
             .map_err(|e| UraniumError::AuditLog(e.to_string()))?;
 
         Ok(Self {
-            file_path,
             file: Mutex::new(file),
         })
     }
@@ -166,6 +168,8 @@ impl AuditLogger for FileAuditLogger {
             models_accessed_today: 0,
             failed_auth_attempts: 0,
             security_alerts: 0,
+            total_sessions: 0,
+            active_session_ids: Vec::new(),
         })
     }
 }
@@ -388,41 +392,53 @@ impl AuditLogger for DatabaseAuditLogger {
 
         Ok(AuditStats {
             total_events: total.count as u64,
-            events_by_type: HashMap::new(), // TODO: Implement
-            active_sessions: 0,             // TODO: Get from session manager
+            events_by_type: HashMap::new(),
+            active_sessions: 0,
             models_accessed_today: models_today.count as u64,
             failed_auth_attempts: failed_auth.count as u64,
             security_alerts: alerts.count as u64,
+            total_sessions: 0,
+            active_session_ids: Vec::new(),
         })
     }
 }
 
 pub struct SecurityMonitor {
     logger: Arc<dyn AuditLogger>,
-    alert_threshold: HashMap<String, (u64, std::time::Duration)>,
+    session_manager: Arc<SessionManager>,
 }
 
 impl SecurityMonitor {
-    pub fn new(logger: Arc<dyn AuditLogger>) -> Self {
-        let mut thresholds = HashMap::new();
-        thresholds.insert(
-            "failed_auth".to_string(),
-            (5, std::time::Duration::from_secs(300)),
-        );
-        thresholds.insert(
-            "model_access".to_string(),
-            (100, std::time::Duration::from_secs(3600)),
-        );
-
+    pub fn new(logger: Arc<dyn AuditLogger>, session_manager: Arc<SessionManager>) -> Self {
         Self {
             logger,
-            alert_threshold: thresholds,
+            session_manager,
         }
     }
 
     pub async fn check_anomalies(&self) -> Result<()> {
         // Check for suspicious patterns
-        let _ = self.logger.get_stats().await?;
+        let mut stats = self.logger.get_stats().await?;
+        stats.total_sessions = self.session_manager.active_session_count() as u64;
+        stats.active_session_ids = self.session_manager.active_session_ids();
+
+        if stats.failed_auth_attempts > 0 {
+            self.logger
+                .log(AuditEvent::SecurityAlert {
+                    alert_type: "failed_auth_summary".to_string(),
+                    description: format!(
+                        "Detected {} failed authentication attempts in recent interval",
+                        stats.failed_auth_attempts
+                    ),
+                    severity: if stats.failed_auth_attempts > 10 {
+                        AlertSeverity::High
+                    } else {
+                        AlertSeverity::Medium
+                    },
+                    timestamp: Utc::now(),
+                })
+                .await?;
+        }
 
         Ok(())
     }

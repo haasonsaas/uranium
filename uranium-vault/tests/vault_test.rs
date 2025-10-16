@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio;
 use uuid::Uuid;
@@ -44,11 +45,13 @@ impl AuditLogger for MockAuditLogger {
         let events = self.events.lock().await;
         Ok(AuditStats {
             total_events: events.len() as u64,
-            events_by_type: std::collections::HashMap::new(),
+            events_by_type: HashMap::new(),
             active_sessions: 0,
             models_accessed_today: 0,
             failed_auth_attempts: 0,
             security_alerts: 0,
+            total_sessions: 0,
+            active_session_ids: Vec::new(),
         })
     }
 }
