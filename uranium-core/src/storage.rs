@@ -154,10 +154,12 @@ impl ModelStorage {
 
         // Create streaming header
         let header = StreamingEncryptionHeader {
-            algorithm: crate::crypto::EncryptionAlgorithm::ChaCha20Poly1305,
+            algorithm: self.crypto.algorithm(),
             salt: None,
             chunk_size: CHUNK_SIZE,
             total_size: Some(metadata.size_bytes),
+            mac_algorithm: crate::crypto::MacAlgorithm::Blake3Keyed,
+            mac_salt: Vec::new(),
         };
 
         // Write metadata first
@@ -471,10 +473,12 @@ impl ModelStorage {
 
         // Create streaming header
         let header = StreamingEncryptionHeader {
-            algorithm: crate::crypto::EncryptionAlgorithm::ChaCha20Poly1305,
+            algorithm: self.crypto.algorithm(),
             salt: None,
             chunk_size: CHUNK_SIZE,
             total_size: Some(metadata.size_bytes),
+            mac_algorithm: crate::crypto::MacAlgorithm::Blake3Keyed,
+            mac_salt: Vec::new(),
         };
 
         // Write metadata first
