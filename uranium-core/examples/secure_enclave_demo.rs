@@ -3,8 +3,10 @@ use uranium_core::platform::get_platform_security;
 use uranium_core::{
     crypto::EncryptionAlgorithm,
     models::{LicenseConstraints, ModelFormat, ModelFramework, ModelMetadata},
-    Result,
 };
+
+#[cfg(target_os = "macos")]
+use chrono::Utc;
 
 #[cfg(target_os = "macos")]
 use uranium_core::{
@@ -165,6 +167,13 @@ fn test_key_migration() -> uranium_core::Result<()> {
 
     println!("   ✅ Migration path demonstrated");
 
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn run_secure_enclave_demo() -> uranium_core::Result<()> {
+    test_secure_enclave_keys()?;
+    test_secure_enclave_storage()?;
     Ok(())
 }
 

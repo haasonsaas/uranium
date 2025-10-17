@@ -862,7 +862,7 @@ impl<R: Read + Send> StreamingDecryptor<R> for AesGcmStreamingDecryptor<R> {
                         id: "streaming_mac_missing".to_string(),
                     });
                 };
-                let Some(state) = self.mac_accumulator.as_ref().map(Clone::clone) else {
+                let Some(state) = self.mac_accumulator.clone() else {
                     return Err(UraniumError::IntegrityCheckFailed {
                         id: "streaming_mac_state".to_string(),
                     });
