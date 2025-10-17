@@ -210,15 +210,18 @@ struct CacheStats {
 async fn vault_status(State(state): State<Arc<ApiState>>) -> ApiResult<Json<VaultStatus>> {
     let locked = state.vault.is_locked().await;
     let (models_count, cache_stats) = if locked {
-        (0, CacheStats {
-            entries: 0,
-            size_mb: 0.0,
-            hit_rate: 0.0,
-            hits: 0,
-            misses: 0,
-            requests: 0,
-            evictions: 0,
-        })
+        (
+            0,
+            CacheStats {
+                entries: 0,
+                size_mb: 0.0,
+                hit_rate: 0.0,
+                hits: 0,
+                misses: 0,
+                requests: 0,
+                evictions: 0,
+            },
+        )
     } else {
         let stats = state.vault.get_cache_stats();
         (

@@ -1,9 +1,9 @@
 use aead::{Aead, AeadCore, KeyInit, OsRng};
+use aes_gcm::{Aes256Gcm, Nonce as AesNonce};
 use argon2::{
     password_hash::{PasswordHash, PasswordVerifier, SaltString},
     Argon2,
 };
-use aes_gcm::{Aes256Gcm, Nonce as AesNonce};
 use chacha20poly1305::ChaCha20Poly1305;
 use rand::RngCore;
 use ring::pbkdf2;
@@ -789,11 +789,13 @@ impl<R: Read + Send> AesGcmStreamingDecryptor<R> {
             let mut mac_bytes = vec![0u8; mac_len];
             self.reader.read_exact(&mut mac_bytes)?;
 
-            let expected = compute_chunk_mac(*algorithm, key, self.chunk_index, &nonce_bytes, &ciphertext)?;
+            let expected =
+                compute_chunk_mac(*algorithm, key, self.chunk_index, &nonce_bytes, &ciphertext)?;
             if mac_bytes != expected {
-                return Err(UraniumError::Decryption(
-                    format!("Chunk MAC mismatch at index {}", self.chunk_index),
-                ));
+                return Err(UraniumError::Decryption(format!(
+                    "Chunk MAC mismatch at index {}",
+                    self.chunk_index
+                )));
             }
         }
 
@@ -985,11 +987,13 @@ impl<R: Read + Send> ChaCha20Poly1305StreamingDecryptor<R> {
             let mut mac_bytes = vec![0u8; mac_len];
             self.reader.read_exact(&mut mac_bytes)?;
 
-            let expected = compute_chunk_mac(*algorithm, key, self.chunk_index, &nonce_bytes, &ciphertext)?;
+            let expected =
+                compute_chunk_mac(*algorithm, key, self.chunk_index, &nonce_bytes, &ciphertext)?;
             if mac_bytes != expected {
-                return Err(UraniumError::Decryption(
-                    format!("Chunk MAC mismatch at index {}", self.chunk_index),
-                ));
+                return Err(UraniumError::Decryption(format!(
+                    "Chunk MAC mismatch at index {}",
+                    self.chunk_index
+                )));
             }
         }
 
@@ -1118,9 +1122,9 @@ impl StreamingCrypto for VaultCrypto {
             EncryptionAlgorithm::ChaCha20Poly1305 => Ok(Box::new(
                 ChaCha20Poly1305StreamingDecryptor::new(key, reader)?,
             )),
-            EncryptionAlgorithm::AesGcm256 => Ok(Box::new(
-                AesGcmStreamingDecryptor::new(key, reader)?,
-            )),
+            EncryptionAlgorithm::AesGcm256 => {
+                Ok(Box::new(AesGcmStreamingDecryptor::new(key, reader)?))
+            }
         }
     }
 }
@@ -1214,189 +1218,189 @@ mod tests {
             .unwrap());
     }
 
-#[test]
-fn test_streaming_encryption_small_data() {
-    use std::io::Cursor;
+    #[test]
+    fn test_streaming_encryption_small_data() {
+        use std::io::Cursor;
 
-    let key = EncryptionKey::generate();
-    let crypto = VaultCrypto::new(EncryptionAlgorithm::ChaCha20Poly1305);
-    let plaintext = b"Hello, streaming encryption!";
+        let key = EncryptionKey::generate();
+        let crypto = VaultCrypto::new(EncryptionAlgorithm::ChaCha20Poly1305);
+        let plaintext = b"Hello, streaming encryption!";
 
-    // Encrypt
-    let header = StreamingEncryptionHeader {
-        algorithm: EncryptionAlgorithm::ChaCha20Poly1305,
-        salt: None,
-        chunk_size: 64 * 1024, // 64KB chunks
-        total_size: Some(plaintext.len() as u64),
-        mac_algorithm: MacAlgorithm::Blake3Keyed,
-        mac_salt: Vec::new(),
-    };
+        // Encrypt
+        let header = StreamingEncryptionHeader {
+            algorithm: EncryptionAlgorithm::ChaCha20Poly1305,
+            salt: None,
+            chunk_size: 64 * 1024, // 64KB chunks
+            total_size: Some(plaintext.len() as u64),
+            mac_algorithm: MacAlgorithm::Blake3Keyed,
+            mac_salt: Vec::new(),
+        };
 
-    let encrypted_data = {
-        let data = Vec::new();
-        let writer = Cursor::new(data);
-        let mut encryptor = crypto.create_encryptor(&key, writer, header).unwrap();
+        let encrypted_data = {
+            let data = Vec::new();
+            let writer = Cursor::new(data);
+            let mut encryptor = crypto.create_encryptor(&key, writer, header).unwrap();
 
-        encryptor.write_chunk(plaintext).unwrap();
-        let cursor = encryptor.finalize().unwrap();
-        cursor.into_inner()
-    };
+            encryptor.write_chunk(plaintext).unwrap();
+            let cursor = encryptor.finalize().unwrap();
+            cursor.into_inner()
+        };
 
-    // Decrypt
-    let reader = Cursor::new(encrypted_data);
-    let mut decryptor = crypto.create_decryptor(&key, reader).unwrap();
+        // Decrypt
+        let reader = Cursor::new(encrypted_data);
+        let mut decryptor = crypto.create_decryptor(&key, reader).unwrap();
 
-    let mut decrypted = Vec::new();
-    let mut buffer = [0u8; 1024];
+        let mut decrypted = Vec::new();
+        let mut buffer = [0u8; 1024];
 
-    loop {
-        let n = decryptor.read_chunk(&mut buffer).unwrap();
-        if n == 0 {
-            break;
+        loop {
+            let n = decryptor.read_chunk(&mut buffer).unwrap();
+            if n == 0 {
+                break;
+            }
+            decrypted.extend_from_slice(&buffer[..n]);
         }
-        decrypted.extend_from_slice(&buffer[..n]);
+
+        assert_eq!(plaintext, decrypted.as_slice());
+        assert!(decryptor.verify_integrity().is_ok());
     }
 
-    assert_eq!(plaintext, decrypted.as_slice());
-    assert!(decryptor.verify_integrity().is_ok());
-}
+    #[test]
+    fn test_streaming_encryption_large_data() {
+        use std::io::Cursor;
 
-#[test]
-fn test_streaming_encryption_large_data() {
-    use std::io::Cursor;
+        let key = EncryptionKey::generate();
+        let crypto = VaultCrypto::new(EncryptionAlgorithm::ChaCha20Poly1305);
 
-    let key = EncryptionKey::generate();
-    let crypto = VaultCrypto::new(EncryptionAlgorithm::ChaCha20Poly1305);
+        // Create large test data (5MB)
+        let plaintext: Vec<u8> = (0..5 * 1024 * 1024).map(|i| (i % 256) as u8).collect();
 
-    // Create large test data (5MB)
-    let plaintext: Vec<u8> = (0..5 * 1024 * 1024).map(|i| (i % 256) as u8).collect();
+        // Encrypt
+        let header = StreamingEncryptionHeader {
+            algorithm: EncryptionAlgorithm::ChaCha20Poly1305,
+            salt: None,
+            chunk_size: 64 * 1024, // 64KB chunks
+            total_size: Some(plaintext.len() as u64),
+            mac_algorithm: MacAlgorithm::Blake3Keyed,
+            mac_salt: Vec::new(),
+        };
 
-    // Encrypt
-    let header = StreamingEncryptionHeader {
-        algorithm: EncryptionAlgorithm::ChaCha20Poly1305,
-        salt: None,
-        chunk_size: 64 * 1024, // 64KB chunks
-        total_size: Some(plaintext.len() as u64),
-        mac_algorithm: MacAlgorithm::Blake3Keyed,
-        mac_salt: Vec::new(),
-    };
+        let encrypted_data = {
+            let data = Vec::new();
+            let writer = Cursor::new(data);
+            let mut encryptor = crypto.create_encryptor(&key, writer, header).unwrap();
 
-    let encrypted_data = {
-        let data = Vec::new();
-        let writer = Cursor::new(data);
-        let mut encryptor = crypto.create_encryptor(&key, writer, header).unwrap();
+            // Write in smaller chunks to simulate streaming
+            for chunk in plaintext.chunks(8192) {
+                encryptor.write_chunk(chunk).unwrap();
+            }
+            let cursor = encryptor.finalize().unwrap();
+            cursor.into_inner()
+        };
 
-        // Write in smaller chunks to simulate streaming
-        for chunk in plaintext.chunks(8192) {
-            encryptor.write_chunk(chunk).unwrap();
+        // Decrypt
+        let reader = Cursor::new(encrypted_data);
+        let mut decryptor = crypto.create_decryptor(&key, reader).unwrap();
+
+        let mut decrypted = Vec::new();
+        let mut buffer = [0u8; 8192];
+
+        loop {
+            let n = decryptor.read_chunk(&mut buffer).unwrap();
+            if n == 0 {
+                break;
+            }
+            decrypted.extend_from_slice(&buffer[..n]);
         }
-        let cursor = encryptor.finalize().unwrap();
-        cursor.into_inner()
-    };
 
-    // Decrypt
-    let reader = Cursor::new(encrypted_data);
-    let mut decryptor = crypto.create_decryptor(&key, reader).unwrap();
-
-    let mut decrypted = Vec::new();
-    let mut buffer = [0u8; 8192];
-
-    loop {
-        let n = decryptor.read_chunk(&mut buffer).unwrap();
-        if n == 0 {
-            break;
-        }
-        decrypted.extend_from_slice(&buffer[..n]);
+        assert_eq!(plaintext, decrypted);
+        assert!(decryptor.verify_integrity().is_ok());
     }
 
-    assert_eq!(plaintext, decrypted);
-    assert!(decryptor.verify_integrity().is_ok());
-}
+    #[test]
+    fn test_streaming_encryption_aes_gcm() {
+        use std::io::Cursor;
 
-#[test]
-fn test_streaming_encryption_aes_gcm() {
-    use std::io::Cursor;
+        let key = EncryptionKey::generate();
+        let crypto = VaultCrypto::new(EncryptionAlgorithm::AesGcm256);
+        let plaintext = b"AES-GCM streaming data";
 
-    let key = EncryptionKey::generate();
-    let crypto = VaultCrypto::new(EncryptionAlgorithm::AesGcm256);
-    let plaintext = b"AES-GCM streaming data";
+        let header = StreamingEncryptionHeader {
+            algorithm: EncryptionAlgorithm::AesGcm256,
+            salt: None,
+            chunk_size: 32 * 1024,
+            total_size: Some(plaintext.len() as u64),
+            mac_algorithm: MacAlgorithm::Blake3Keyed,
+            mac_salt: Vec::new(),
+        };
 
-    let header = StreamingEncryptionHeader {
-        algorithm: EncryptionAlgorithm::AesGcm256,
-        salt: None,
-        chunk_size: 32 * 1024,
-        total_size: Some(plaintext.len() as u64),
-        mac_algorithm: MacAlgorithm::Blake3Keyed,
-        mac_salt: Vec::new(),
-    };
+        let encrypted_data = {
+            let data = Vec::new();
+            let writer = Cursor::new(data);
+            let mut encryptor = crypto.create_encryptor(&key, writer, header).unwrap();
+            encryptor.write_chunk(plaintext).unwrap();
+            let cursor = encryptor.finalize().unwrap();
+            cursor.into_inner()
+        };
 
-    let encrypted_data = {
-        let data = Vec::new();
-        let writer = Cursor::new(data);
-        let mut encryptor = crypto.create_encryptor(&key, writer, header).unwrap();
-        encryptor.write_chunk(plaintext).unwrap();
-        let cursor = encryptor.finalize().unwrap();
-        cursor.into_inner()
-    };
+        let reader = Cursor::new(encrypted_data);
+        let mut decryptor = crypto.create_decryptor(&key, reader).unwrap();
 
-    let reader = Cursor::new(encrypted_data);
-    let mut decryptor = crypto.create_decryptor(&key, reader).unwrap();
+        let mut decrypted = Vec::new();
+        let mut buffer = [0u8; 1024];
 
-    let mut decrypted = Vec::new();
-    let mut buffer = [0u8; 1024];
-
-    loop {
-        let n = decryptor.read_chunk(&mut buffer).unwrap();
-        if n == 0 {
-            break;
+        loop {
+            let n = decryptor.read_chunk(&mut buffer).unwrap();
+            if n == 0 {
+                break;
+            }
+            decrypted.extend_from_slice(&buffer[..n]);
         }
-        decrypted.extend_from_slice(&buffer[..n]);
+
+        assert_eq!(plaintext, decrypted.as_slice());
+        assert!(decryptor.verify_integrity().is_ok());
     }
 
-    assert_eq!(plaintext, decrypted.as_slice());
-    assert!(decryptor.verify_integrity().is_ok());
-}
+    #[test]
+    fn test_streaming_integrity_check() {
+        use std::io::Cursor;
 
-#[test]
-fn test_streaming_integrity_check() {
-    use std::io::Cursor;
+        let key = EncryptionKey::generate();
+        let crypto = VaultCrypto::new(EncryptionAlgorithm::ChaCha20Poly1305);
+        let plaintext = b"Integrity test data";
 
-    let key = EncryptionKey::generate();
-    let crypto = VaultCrypto::new(EncryptionAlgorithm::ChaCha20Poly1305);
-    let plaintext = b"Integrity test data";
+        // Encrypt
+        let header = StreamingEncryptionHeader {
+            algorithm: EncryptionAlgorithm::ChaCha20Poly1305,
+            salt: None,
+            chunk_size: 64 * 1024, // 64KB chunks
+            total_size: Some(plaintext.len() as u64),
+            mac_algorithm: MacAlgorithm::Blake3Keyed,
+            mac_salt: Vec::new(),
+        };
 
-    // Encrypt
-    let header = StreamingEncryptionHeader {
-        algorithm: EncryptionAlgorithm::ChaCha20Poly1305,
-        salt: None,
-        chunk_size: 64 * 1024, // 64KB chunks
-        total_size: Some(plaintext.len() as u64),
-        mac_algorithm: MacAlgorithm::Blake3Keyed,
-        mac_salt: Vec::new(),
-    };
+        let mut encrypted_data = {
+            let data = Vec::new();
+            let writer = Cursor::new(data);
+            let mut encryptor = crypto.create_encryptor(&key, writer, header).unwrap();
 
-    let mut encrypted_data = {
-        let data = Vec::new();
-        let writer = Cursor::new(data);
-        let mut encryptor = crypto.create_encryptor(&key, writer, header).unwrap();
+            encryptor.write_chunk(plaintext).unwrap();
+            let cursor = encryptor.finalize().unwrap();
+            cursor.into_inner()
+        };
 
-        encryptor.write_chunk(plaintext).unwrap();
-        let cursor = encryptor.finalize().unwrap();
-        cursor.into_inner()
-    };
+        // Corrupt the encrypted data
+        let data_len = encrypted_data.len();
+        encrypted_data[data_len / 2] ^= 0x01;
 
-    // Corrupt the encrypted data
-    let data_len = encrypted_data.len();
-    encrypted_data[data_len / 2] ^= 0x01;
+        // Try to decrypt - should fail
+        let reader = Cursor::new(encrypted_data);
+        let mut decryptor = crypto.create_decryptor(&key, reader).unwrap();
 
-    // Try to decrypt - should fail
-    let reader = Cursor::new(encrypted_data);
-    let mut decryptor = crypto.create_decryptor(&key, reader).unwrap();
+        let mut buffer = [0u8; 1024];
 
-    let mut buffer = [0u8; 1024];
-
-    // Decryption should fail due to chunk MAC mismatch
-    let result = decryptor.read_chunk(&mut buffer);
-    assert!(result.is_err());
-}
+        // Decryption should fail due to chunk MAC mismatch
+        let result = decryptor.read_chunk(&mut buffer);
+        assert!(result.is_err());
+    }
 }

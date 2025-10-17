@@ -381,13 +381,12 @@ impl Vault {
         #[cfg(unix)]
         {
             use nix::sys::mman::mlock;
+            use std::ffi::c_void;
 
-            // Try to lock all current and future memory
-            use std::ptr::NonNull;
-            if let Some(non_null_ptr) =
-                NonNull::new(model.weights.as_ptr() as *mut std::ffi::c_void)
-            {
-                if let Err(_) = unsafe { mlock(non_null_ptr, model.weights.len()) } {
+            let ptr = model.weights.as_ptr() as *const c_void;
+            let len = model.weights.len();
+            unsafe {
+                if let Err(_) = mlock(ptr, len) {
                     tracing::warn!("Failed to lock model memory pages");
                 }
             }

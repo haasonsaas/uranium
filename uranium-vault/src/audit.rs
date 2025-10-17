@@ -347,8 +347,7 @@ impl AuditLogger for DatabaseAuditLogger {
             .into_iter()
             .map(|row| {
                 let event_data: &str = row.get("event_data");
-                serde_json::from_str(event_data)
-                    .map_err(|e| UraniumError::AuditLog(e.to_string()))
+                serde_json::from_str(event_data).map_err(|e| UraniumError::AuditLog(e.to_string()))
             })
             .collect();
 

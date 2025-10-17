@@ -225,11 +225,7 @@ impl SessionManager {
     }
 
     pub fn active_session_ids(&self) -> Vec<Uuid> {
-        self.sessions
-            .read()
-            .keys()
-            .copied()
-            .collect()
+        self.sessions.read().keys().copied().collect()
     }
 }
 
