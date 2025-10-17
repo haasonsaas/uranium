@@ -382,12 +382,13 @@ impl Vault {
         {
             use nix::sys::mman::mlock;
             use std::ffi::c_void;
+            use std::ptr::NonNull;
 
-            let ptr = model.weights.as_ptr() as *const c_void;
-            let len = model.weights.len();
-            unsafe {
-                if let Err(_) = mlock(ptr, len) {
-                    tracing::warn!("Failed to lock model memory pages");
+            if let Some(ptr) = NonNull::new(model.weights.as_ptr() as *mut c_void) {
+                unsafe {
+                    if let Err(_) = mlock(ptr, model.weights.len()) {
+                        tracing::warn!("Failed to lock model memory pages");
+                    }
                 }
             }
         }

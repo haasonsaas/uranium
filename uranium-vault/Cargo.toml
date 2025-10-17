@@ -46,7 +46,7 @@ tempfile = "3"
 
 # Configuration
 config = "0.14"
-dotenv = "0.15"
+dotenvy = "0.15"
 
 [[bin]]
 name = "uranium-vault-server"
