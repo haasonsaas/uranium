@@ -1,0 +1,15 @@
+# cargo-audit configuration
+# See: https://github.com/RustSec/rustsec/blob/main/cargo-audit/audit.toml.example
+
+[advisories]
+# Known vulnerabilities that are accepted/documented
+ignore = [
+    # RUSTSEC-2023-0071: Marvin Attack in rsa crate
+    # Impact: Potential timing sidechannel for key recovery
+    # Reason: This comes from sqlx-mysql which is pulled in by sqlx-macros,
+    #         but we only use SQLite in this project. The rsa crate is not
+    #         actually used in our runtime dependencies.
+    # Status: No fix available yet. Monitoring for updates.
+    # Date: 2025-10-17
+    "RUSTSEC-2023-0071",
+]
